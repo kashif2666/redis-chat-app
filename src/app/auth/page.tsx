@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import AuthButtons from "./AuthButtons";
 
@@ -12,7 +11,7 @@ const page = () => {
           className="absolute -left-1/4 opacity-25 -bottom-52 lg:scale-125 xl:scale-100 scale-[2] pointer-events-none select-none -z-1"
         />
 
-        <div className="flex flex-col gap-5 px-4 xl:ml-40 text-center md:text-start font-semibold">
+        <div className="flex flex-col gap-2 px-4 xl:ml-40 text-center md:text-start font-semibold">
           <Image
             src={"/logo.png"}
             alt="RediStash logo"
