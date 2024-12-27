@@ -55,7 +55,7 @@ const ChatBottomBar = () => {
         >
           <Textarea
             autoComplete="off"
-            placeholder="Type your Message"
+            placeholder="Message"
             rows={1}
             className="w-full border rounded-full flex items-center h-9 resize-none overflow-hidden bg-background min-h-0"
             value={message}
