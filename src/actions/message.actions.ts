@@ -1,5 +1,6 @@
 "use server";
 
+import { Message } from "@/db/dummy";
 import { redis } from "@/lib/db";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
@@ -66,4 +67,25 @@ export async function sendMessageAction({
   });
 
   return { success: true, conversationId, messageId };
+}
+
+export async function getMessages(
+  selectedUserId: string,
+  currentUserId: string
+) {
+  //
+  const conversationId = `conversation:${[selectedUserId, currentUserId]
+    .sort()
+    .join(":")}`;
+
+  const messageId = await redis.zrange(`${conversationId}:messages`, 0, -1);
+
+  if (messageId.length === 0) return [];
+
+  const pipeline = redis.pipeline();
+  messageId.forEach((messageId) => pipeline.hgetall(messageId as string));
+
+  const messages = (await pipeline.exec()) as Message[];
+
+  return messages;
 }
