@@ -6,15 +6,16 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import { Textarea } from "../ui/textarea";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import EmojiPicker from "./EmojiPicker";
 import { Button } from "../ui/button";
 import useSound from "use-sound";
 import { CldUploadWidget, CloudinaryUploadWidgetInfo } from "next-cloudinary";
 import { usePreferences } from "@/store/usePreferences";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { sendMessageAction } from "@/actions/message.actions";
 import { useSelectedUser } from "@/store/useSelectedUser";
+import { pusherClient } from "@/lib/pusher";
 import {
   Dialog,
   DialogContent,
@@ -23,11 +24,15 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import Image from "next/image";
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import { Message } from "@/db/dummy";
 
 const ChatBottomBar = () => {
   const [message, setMessage] = useState("");
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const { selectedUser } = useSelectedUser();
+  const { user: currentUser } = useKindeBrowserClient();
+  const queryClient = useQueryClient();
 
   const [imgUrl, setImgUrl] = useState("");
 
@@ -36,6 +41,7 @@ const ChatBottomBar = () => {
   const [playSound2] = useSound("/sounds/keystroke2.mp3");
   const [playSound3] = useSound("/sounds/keystroke3.mp3");
   const [playSound4] = useSound("/sounds/keystroke4.mp3");
+  const [playNotificationSound] = useSound("/sounds/notification.mp3");
 
   const playSoundFunctions = [playSound1, playSound2, playSound3, playSound4];
 
@@ -70,6 +76,40 @@ const ChatBottomBar = () => {
       setMessage(message + "\n");
     }
   };
+
+  useEffect(() => {
+    const channelName = `${currentUser?.id}__${selectedUser?.id}`
+      .split("__")
+      .sort()
+      .join("__");
+    const channel = pusherClient?.subscribe(channelName);
+
+    const handleNewMessage = (data: { message: Message }) => {
+      queryClient.setQueryData(
+        ["messages", selectedUser?.id],
+        (oldMessages: Message[]) => {
+          return [...oldMessages, data.message];
+        }
+      );
+
+      if (soundEnabled && data.message.senderId !== currentUser?.id) {
+        playNotificationSound();
+      }
+    };
+
+    channel.bind("newMessage", handleNewMessage);
+
+    return () => {
+      channel.unbind("newMessage", handleNewMessage);
+      pusherClient.unsubscribe(channelName);
+    };
+  }, [
+    currentUser?.id,
+    selectedUser?.id,
+    queryClient,
+    playNotificationSound,
+    soundEnabled,
+  ]);
 
   return (
     <div className="p-2 flex justify-between w-full items-center gap-2">
